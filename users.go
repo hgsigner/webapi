@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -54,8 +55,14 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
-	// data, _ := json.Marshal(u)
-	// w.Write(data)
+	newUser := User{}
+	err = collection.Find(bson.M{"email": u.Email}).One(&newUser)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	data, _ := json.Marshal(newUser)
+	w.Write(data)
 
 }
 
