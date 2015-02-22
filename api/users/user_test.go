@@ -122,11 +122,11 @@ func Test_Show_Handler_NotFound(t *testing.T) {
 
 	a := assert.New(t)
 
-	//fakeId := bson.NewObjectId()
+	fakeId := bson.NewObjectId()
 
 	m := routes.AppMux()
 	w := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", "/users/dkjfdkjfkd", nil)
+	r, _ := http.NewRequest("GET", "/users/"+fakeId.Hex(), nil)
 
 	m.ServeHTTP(w, r)
 
