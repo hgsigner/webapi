@@ -15,7 +15,6 @@ func AppMux() http.Handler {
 	//Users routes
 
 	u := m.PathPrefix("/users").Subrouter()
-
 	u.
 		Methods("GET").
 		Path("/").
@@ -26,7 +25,6 @@ func AppMux() http.Handler {
 		Handler(alice.New(logMiddleware).ThenFunc(users.CreateHandler))
 
 	uid := m.PathPrefix("/users/{id}").Subrouter()
-
 	uid.
 		Methods("GET").
 		Handler(alice.New(logMiddleware).ThenFunc(users.ShowHandler))
