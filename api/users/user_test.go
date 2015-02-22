@@ -34,36 +34,21 @@ func fullUserFactory2() url.Values {
 	return form
 }
 
+func partUserFactory1() url.Values {
+	form := url.Values{}
+	form.Set("first_name", "Hugo")
+	return form
+}
+
 func partUserFactory2() url.Values {
 	form := url.Values{}
 	form.Set("first_name", "Flora")
 	return form
 }
 
-func createTestUser(user users.User) (users.User, error) {
-	session := db.InitDb().Copy()
-	defer session.Close()
-
-	collection := db.GetCollection(session, "users")
-
-	b_user := users.User{}
-	err := collection.Insert(user)
-	if err != nil {
-		return b_user, err
-	}
-
-	f_user := users.User{}
-	err = collection.FindId(user.ID).One(&f_user)
-	if err != nil {
-		return b_user, err
-	}
-
-	return f_user, nil
-}
-
 // Teardown
 
-func cleartUserCollection() {
+func clearUsersCollection() {
 	session := db.InitDb().Copy()
 	defer session.Close()
 	db.GetCollection(session, "users").RemoveAll(bson.M{})
@@ -102,11 +87,11 @@ func Test_Show_Handler_Ok(t *testing.T) {
 		"hugo@test.com",
 	}
 
-	ruser, iderr := createTestUser(user)
+	ruser, iderr := users.CreateUser(user)
 	if iderr != nil {
 		log.Fatal(iderr)
 	}
-	defer cleartUserCollection()
+	defer clearUsersCollection()
 
 	a := assert.New(t)
 
@@ -184,7 +169,7 @@ func Test_Create_User_Handler_Ok(t *testing.T) {
 
 	a := assert.New(t)
 
-	defer cleartUserCollection()
+	defer clearUsersCollection()
 
 	m := routes.AppMux()
 	w := httptest.NewRecorder()
@@ -219,11 +204,11 @@ func Test_Update_User_Ok(t *testing.T) {
 		"hugo@test.com",
 	}
 
-	ruser, iderr := createTestUser(user)
+	ruser, iderr := users.CreateUser(user)
 	if iderr != nil {
 		log.Fatal(iderr)
 	}
-	defer cleartUserCollection()
+	defer clearUsersCollection()
 
 	form := partUserFactory2()
 
@@ -242,5 +227,36 @@ func Test_Update_User_Ok(t *testing.T) {
 	a.Contains(string(body), "Flora")
 	a.Contains(string(body), "Dorea")
 	a.Contains(string(body), "hugo@test.com")
+
+}
+
+func Test_Delete_User_Ok(t *testing.T) {
+
+	db.AppEnv = "test"
+
+	a := assert.New(t)
+
+	user := users.User{
+		bson.NewObjectId(),
+		"Hugo",
+		"Dorea",
+		"hugo@test.com",
+	}
+
+	ruser, iderr := users.CreateUser(user)
+	if iderr != nil {
+		log.Fatal(iderr)
+	}
+	defer clearUsersCollection()
+
+	m := routes.AppMux()
+	w := httptest.NewRecorder()
+	r, err := http.NewRequest("DELETE", "/users/"+ruser.ID.Hex(), nil)
+
+	m.ServeHTTP(w, r)
+
+	a.NoError(err)
+	a.Equal(200, w.Code)
+	a.Equal("application/json", w.Header().Get("Content-Type"))
 
 }

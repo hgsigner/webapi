@@ -30,7 +30,28 @@ type JsonHttpError struct {
 
 // Methods
 
-func findUser(id string) (User, error) {
+func CreateUser(user User) (User, error) {
+
+	session := db.InitDb().Copy()
+	defer session.Close()
+	collection := db.GetCollection(session, "users")
+
+	u := User{}
+	err := collection.Insert(user)
+	if err != nil {
+		return u, err
+	}
+
+	f_user, f_err := FindUser(user.ID.Hex())
+	if f_err != nil {
+		return u, err
+	}
+
+	return f_user, nil
+
+}
+
+func FindUser(id string) (User, error) {
 
 	session := db.InitDb().Copy()
 	defer session.Close()
@@ -46,6 +67,21 @@ func findUser(id string) (User, error) {
 
 }
 
+func DeleteUser(id string) error {
+
+	session := db.InitDb().Copy()
+	defer session.Close()
+	collection := db.GetCollection(session, "users")
+
+	err := collection.RemoveId(bson.ObjectIdHex(id))
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
 // Handlers
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -54,6 +90,7 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ShowHandler(w http.ResponseWriter, r *http.Request) {
+
 	vars := mux.Vars(r)
 	id := vars["id"]
 	w.Header().Set("Content-Type", "application/json")
@@ -64,7 +101,7 @@ func ShowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := findUser(id)
+	user, err := FindUser(id)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(JsonHttpError{404, "Not Found"})
@@ -73,45 +110,37 @@ func ShowHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(UserResults{[]User{user}})
+
 }
 
 func CreateHandler(w http.ResponseWriter, r *http.Request) {
+
 	err := r.ParseForm()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	session := db.InitDb().Copy()
-	defer session.Close()
-
-	collection := db.GetCollection(session, "users")
-
-	u := &User{}
+	u := User{}
 	u.ID = bson.NewObjectId()
 	decoder := schema.NewDecoder()
-	err = decoder.Decode(u, r.Form)
+	err = decoder.Decode(&u, r.Form)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = collection.Insert(u)
+	user, err := CreateUser(u)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-
-	user, err := findUser(u.ID.Hex())
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	json.NewEncoder(w).Encode(UserResults{[]User{user}})
 
 }
 
 func UpdateHandler(w http.ResponseWriter, r *http.Request) {
+
 	vars := mux.Vars(r)
 	id := vars["id"]
 	w.Header().Set("Content-Type", "application/json")
@@ -150,11 +179,31 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 
-	f_user, err := findUser(id)
+	f_user, err := FindUser(id)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	json.NewEncoder(w).Encode(UserResults{[]User{f_user}})
+
+}
+
+func DeleteHandler(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	id := vars["id"]
+	w.Header().Set("Content-Type", "application/json")
+
+	if validId := bson.IsObjectIdHex(id); !validId {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(JsonHttpError{404, "Not Found"})
+		return
+	}
+
+	err := DeleteUser(id)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 
 }

@@ -20,7 +20,6 @@ func AppMux() http.Handler {
 		Methods("GET").
 		Path("/").
 		Handler(alice.New(logMiddleware).ThenFunc(users.IndexHandler))
-
 	u.
 		Methods("POST").
 		Path("/create").
@@ -34,6 +33,9 @@ func AppMux() http.Handler {
 	uid.
 		Methods("PUT").
 		Handler(alice.New(logMiddleware).ThenFunc(users.UpdateHandler))
+	uid.
+		Methods("DELETE").
+		Handler(alice.New(logMiddleware).ThenFunc(users.DeleteHandler))
 
 	return m
 
