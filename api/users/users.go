@@ -38,12 +38,18 @@ func ShowHandler(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 	w.Header().Set("Content-Type", "application/json")
 
+	if validId := bson.IsObjectIdHex(id); !validId {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(JsonHttpError{404, "Not Found"})
+		return
+	}
+
 	session := db.InitDb().Copy()
 	defer session.Close()
 	collection := db.GetCollection(session, "users")
 
 	user := User{}
-	err := collection.Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&user)
+	err := collection.FindId(bson.ObjectIdHex(id)).One(&user)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(JsonHttpError{404, "Not Found"})

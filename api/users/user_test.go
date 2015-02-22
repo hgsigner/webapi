@@ -39,7 +39,7 @@ func createTestUser(user users.User) (users.User, error) {
 	}
 
 	f_user := users.User{}
-	err = collection.Find(bson.M{"_id": user.ID}).One(&f_user)
+	err = collection.FindId(user.ID).One(&f_user)
 	if err != nil {
 		return b_user, err
 	}
@@ -127,6 +127,29 @@ func Test_Show_Handler_NotFound(t *testing.T) {
 	m := routes.AppMux()
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("GET", "/users/"+fakeId.Hex(), nil)
+
+	m.ServeHTTP(w, r)
+
+	a.Equal(404, w.Code)
+	a.Equal("application/json", w.Header().Get("Content-Type"))
+
+	body, _ := ioutil.ReadAll(w.Body)
+	a.Contains(string(body), `"code":404`)
+	a.Contains(string(body), `"message":"Not Found"`)
+
+}
+
+// test invalid id
+
+func Test_Show_Handler_Invalid_Id(t *testing.T) {
+
+	db.AppEnv = "test"
+
+	a := assert.New(t)
+
+	m := routes.AppMux()
+	w := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET", "/users/klfjlskdjflk", nil)
 
 	m.ServeHTTP(w, r)
 
