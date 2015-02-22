@@ -27,6 +27,27 @@ func CreateUser(user User) (User, error) {
 
 }
 
+func UpdateUser(id bson.ObjectId, user User) (User, error) {
+
+	session := db.InitDb().Copy()
+	defer session.Close()
+	collection := db.GetCollection(session, "users")
+
+	u := User{}
+	err := collection.UpdateId(id, bson.M{"$set": user})
+	if err != nil {
+		return u, err
+	}
+
+	f_user, f_err := FindUser(id.Hex())
+	if f_err != nil {
+		return u, err
+	}
+
+	return f_user, nil
+
+}
+
 func FindUser(id string) (User, error) {
 
 	session := db.InitDb().Copy()

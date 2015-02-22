@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"projects/webapi/db"
 
 	"github.com/gorilla/Schema"
 	"github.com/gorilla/mux"
@@ -69,6 +68,11 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 
 func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
+	err := r.ParseForm()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	vars := mux.Vars(r)
 	id := vars["id"]
 	w.Header().Set("Content-Type", "application/json")
@@ -79,39 +83,20 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uid := bson.ObjectIdHex(id)
-
-	err := r.ParseForm()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	session := db.InitDb().Copy()
-	defer session.Close()
-
-	collection := db.GetCollection(session, "users")
-
-	u := &User{}
+	u := User{}
 	decoder := schema.NewDecoder()
-	err = decoder.Decode(u, r.Form)
+	err = decoder.Decode(&u, r.Form)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(u)
-
-	err = collection.UpdateId(uid, bson.M{"$set": u})
+	uid := bson.ObjectIdHex(id)
+	f_user, err := UpdateUser(uid, u)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	w.WriteHeader(http.StatusOK)
-
-	f_user, err := FindUser(id)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	json.NewEncoder(w).Encode(UserResults{[]User{f_user}})
 
 }
