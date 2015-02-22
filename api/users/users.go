@@ -13,10 +13,10 @@ import (
 )
 
 type User struct {
-	ID        bson.ObjectId `bson:"_id" json:"_id" schema:"_id"`
-	FirstName string        `bson:"fisrt_name" json:"first_name" schema:"first_name"`
-	LastName  string        `bson:"last_name" json:"last_name" schema:"last_name"`
-	Email     string        `bson:"email" json:"email" schema:"email"`
+	ID        bson.ObjectId `bson:"_id,omitempty" json:"_id" schema:"_id"`
+	FirstName string        `bson:"fisrt_name,omitempty" json:"first_name" schema:"first_name"`
+	LastName  string        `bson:"last_name,omitempty" json:"last_name" schema:"last_name"`
+	Email     string        `bson:"email,omitempty" json:"email" schema:"email"`
 }
 
 type UserResults struct {
@@ -27,6 +27,26 @@ type JsonHttpError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
+
+// Methods
+
+func findUser(id string) (User, error) {
+
+	session := db.InitDb().Copy()
+	defer session.Close()
+	collection := db.GetCollection(session, "users")
+
+	user := User{}
+	err := collection.FindId(bson.ObjectIdHex(id)).One(&user)
+	if err != nil {
+		return user, err
+	}
+
+	return user, nil
+
+}
+
+// Handlers
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -44,12 +64,7 @@ func ShowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session := db.InitDb().Copy()
-	defer session.Close()
-	collection := db.GetCollection(session, "users")
-
-	user := User{}
-	err := collection.FindId(bson.ObjectIdHex(id)).One(&user)
+	user, err := findUser(id)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(JsonHttpError{404, "Not Found"})
@@ -87,12 +102,59 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
-	newUser := User{}
-	err = collection.Find(bson.M{"_id": u.ID}).One(&newUser)
+	user, err := findUser(u.ID.Hex())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	json.NewEncoder(w).Encode(UserResults{[]User{newUser}})
+	json.NewEncoder(w).Encode(UserResults{[]User{user}})
+
+}
+
+func UpdateHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	w.Header().Set("Content-Type", "application/json")
+
+	if validId := bson.IsObjectIdHex(id); !validId {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(JsonHttpError{404, "Not Found"})
+		return
+	}
+
+	uid := bson.ObjectIdHex(id)
+
+	err := r.ParseForm()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	session := db.InitDb().Copy()
+	defer session.Close()
+
+	collection := db.GetCollection(session, "users")
+
+	u := &User{}
+	decoder := schema.NewDecoder()
+	err = decoder.Decode(u, r.Form)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(u)
+
+	err = collection.UpdateId(uid, bson.M{"$set": u})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+	f_user, err := findUser(id)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	json.NewEncoder(w).Encode(UserResults{[]User{f_user}})
 
 }

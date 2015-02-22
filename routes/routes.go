@@ -22,14 +22,18 @@ func AppMux() http.Handler {
 		Handler(alice.New(logMiddleware).ThenFunc(users.IndexHandler))
 
 	u.
-		Methods("GET").
-		Path("/{id}").
-		HandlerFunc(users.ShowHandler)
-
-	u.
 		Methods("POST").
 		Path("/create").
-		HandlerFunc(users.CreateHandler)
+		Handler(alice.New(logMiddleware).ThenFunc(users.CreateHandler))
+
+	uid := m.PathPrefix("/users/{id}").Subrouter()
+
+	uid.
+		Methods("GET").
+		Handler(alice.New(logMiddleware).ThenFunc(users.ShowHandler))
+	uid.
+		Methods("PUT").
+		Handler(alice.New(logMiddleware).ThenFunc(users.UpdateHandler))
 
 	return m
 

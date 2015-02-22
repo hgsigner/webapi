@@ -18,11 +18,25 @@ import (
 
 // Setup
 
-func fullUserFactory() url.Values {
+func fullUserFactory1() url.Values {
 	form := url.Values{}
 	form.Set("first_name", "Hugo")
 	form.Add("last_name", "Dorea")
-	form.Add("email", "test@test.com")
+	form.Add("email", "hugo@test.com")
+	return form
+}
+
+func fullUserFactory2() url.Values {
+	form := url.Values{}
+	form.Set("first_name", "Flora")
+	form.Add("last_name", "Dorea")
+	form.Add("email", "flora@test.com")
+	return form
+}
+
+func partUserFactory2() url.Values {
+	form := url.Values{}
+	form.Set("first_name", "Flora")
 	return form
 }
 
@@ -85,7 +99,7 @@ func Test_Show_Handler_Ok(t *testing.T) {
 		bson.NewObjectId(),
 		"Hugo",
 		"Dorea",
-		"test@test.com",
+		"hugo@test.com",
 	}
 
 	ruser, iderr := createTestUser(user)
@@ -112,7 +126,7 @@ func Test_Show_Handler_Ok(t *testing.T) {
 	a.Contains(string(body), ruser.ID.Hex())
 	a.Contains(string(body), `"first_name":"Hugo"`)
 	a.Contains(string(body), `"last_name":"Dorea"`)
-	a.Contains(string(body), `"email":"test@test.com"`)
+	a.Contains(string(body), `"email":"hugo@test.com"`)
 
 }
 
@@ -166,7 +180,7 @@ func Test_Create_User_Handler_Ok(t *testing.T) {
 
 	db.AppEnv = "test"
 
-	form := fullUserFactory()
+	form := fullUserFactory1()
 
 	a := assert.New(t)
 
@@ -188,6 +202,45 @@ func Test_Create_User_Handler_Ok(t *testing.T) {
 	a.Contains(string(body), "_id")
 	a.Contains(string(body), `"first_name":"Hugo"`)
 	a.Contains(string(body), `"last_name":"Dorea"`)
-	a.Contains(string(body), `"email":"test@test.com"`)
+	a.Contains(string(body), `"email":"hugo@test.com"`)
+
+}
+
+func Test_Update_User_Ok(t *testing.T) {
+
+	db.AppEnv = "test"
+
+	a := assert.New(t)
+
+	user := users.User{
+		bson.NewObjectId(),
+		"Hugo",
+		"Dorea",
+		"hugo@test.com",
+	}
+
+	ruser, iderr := createTestUser(user)
+	if iderr != nil {
+		log.Fatal(iderr)
+	}
+	defer cleartUserCollection()
+
+	form := partUserFactory2()
+
+	m := routes.AppMux()
+	w := httptest.NewRecorder()
+	r, err := http.NewRequest("PUT", "/users/"+ruser.ID.Hex(), strings.NewReader(form.Encode()))
+	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	m.ServeHTTP(w, r)
+
+	a.NoError(err)
+	a.Equal(200, w.Code)
+	a.Equal("application/json", w.Header().Get("Content-Type"))
+
+	body, _ := ioutil.ReadAll(w.Body)
+	a.Contains(string(body), "Flora")
+	a.Contains(string(body), "Dorea")
+	a.Contains(string(body), "hugo@test.com")
 
 }
