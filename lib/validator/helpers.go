@@ -39,11 +39,21 @@ func getValidationTags(s interface{}) []validationData {
 
 }
 
-func filterValidationName(name string) string {
-	l := regexp.MustCompile("=").Split(name, -1)
-	if len(l) > 1 {
-		return l[0]
+func filterValidationTag(tagType, value string) interface{} {
+
+	l := regexp.MustCompile("=").Split(value, -1)
+	switch tagType {
+	case "tname":
+		if len(l) > 1 {
+			return l[0]
+		}
+		return value
+	case "tvalue":
+		if len(l) > 1 {
+			return l[1]
+		}
+		return ""
 	}
 
-	return name
+	return ""
 }

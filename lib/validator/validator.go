@@ -16,7 +16,7 @@ func Valid(s interface{}) bool {
 	//fmt.Println(">>IN ", ErrosListHolder.Any())
 
 	for _, val := range fields {
-		switch filterValidationName(val.validaton) {
+		switch filterValidationTag("tname", val.validaton) {
 		case "presence":
 			validatePresence(val)
 		case "min", "max":

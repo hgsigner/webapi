@@ -1,7 +1,7 @@
 package validator
 
 import (
-	"regexp"
+	"log"
 	"strconv"
 )
 
@@ -19,28 +19,40 @@ func validatePresence(data validationData) {
 }
 
 func validateFormat(data validationData) {
-	// ErrosListHolder.AppendError(ErrorMessage{data.fieldName, "Must e valid"})
-	// return
+
+	tv := filterValidationTag("tvalue", data.validaton)
+
+	switch tv.(string) {
+	case "email":
+		match := emailRegex.MatchString(data.value.(string))
+		if !match {
+			ErrosListHolder.AppendError(ErrorMessage{data.fieldName, "Format must match"})
+			return
+		}
+	}
 }
 
 func validateMinMax(data validationData) {
 
-	vl := regexp.MustCompile("=").Split(data.validaton, -1)
-	refValue, err := strconv.Atoi(vl[1])
+	vl := filterValidationTag("tvalue", data.validaton)
+	refValue, err := strconv.Atoi(vl.(string))
 	if err != nil {
 		ErrosListHolder.AppendError(ErrorMessage{data.fieldName, "Must be a number"})
+		log.Println(ErrosListHolder)
 		return
 	}
 
-	switch vl[0] {
+	switch filterValidationTag("tname", data.validaton) {
 	case "min":
 		if data.value.(int) < refValue {
-			ErrosListHolder.AppendError(ErrorMessage{data.fieldName, "Must be greater than " + vl[1]})
+			ErrosListHolder.AppendError(ErrorMessage{data.fieldName, "Must be greater than " + vl.(string)})
+			log.Println(ErrosListHolder)
 			return
 		}
 	case "max":
 		if data.value.(int) > refValue {
-			ErrosListHolder.AppendError(ErrorMessage{data.fieldName, "Must be less than " + vl[1]})
+			ErrosListHolder.AppendError(ErrorMessage{data.fieldName, "Must be less than " + vl.(string)})
+			log.Println(ErrosListHolder)
 			return
 		}
 	}

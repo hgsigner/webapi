@@ -1,7 +1,6 @@
-package validator_test
+package validator
 
 import (
-	"projects/webapi/lib/validator"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +14,7 @@ type struct1 struct {
 
 type struct2 struct {
 	Name  string `validates:"presence"`
-	Email string `validates:"presence,format=/^[A-Z0-9._%a-z\-]+@(?:[A-Z0-9a-z\-]+\.)+[A-Za-z]{2,4}$/i"`
+	Email string `validates:"presence,format=email"`
 	Age   int    `validates:"min=18,max=100"`
 }
 
@@ -28,10 +27,10 @@ func Test_Struct_Without_Tags(t *testing.T) {
 		10,
 	}
 
-	valid := validator.Valid(strc)
+	valid := Valid(strc)
 
 	a.True(valid)
-	a.Equal(0, len(validator.ErrosListHolder))
+	a.Equal(0, len(ErrosListHolder))
 
 }
 
@@ -44,10 +43,10 @@ func Test_Struct_Being_Valid(t *testing.T) {
 		30,
 	}
 
-	valid := validator.Valid(strc)
+	valid := Valid(strc)
 
 	a.True(valid)
-	a.Equal(0, len(validator.ErrosListHolder))
+	a.Equal(0, len(ErrosListHolder))
 
 }
 
@@ -60,10 +59,12 @@ func Test_Struct_Not_Valid_Min(t *testing.T) {
 		10,
 	}
 
-	valid := validator.Valid(strc)
+	valid := Valid(strc)
 
 	a.False(valid)
-	a.Equal(1, len(validator.ErrosListHolder))
+	a.Equal(1, len(ErrosListHolder))
+	a.Equal("age", ErrosListHolder[0].Field)
+	a.Equal("Must be greater than 18", ErrosListHolder[0].Message)
 }
 
 func Test_Struct_Not_Valid_Max(t *testing.T) {
@@ -75,10 +76,12 @@ func Test_Struct_Not_Valid_Max(t *testing.T) {
 		200,
 	}
 
-	valid := validator.Valid(strc)
+	valid := Valid(strc)
 
 	a.False(valid)
-	a.Equal(1, len(validator.ErrosListHolder))
+	a.Equal(1, len(ErrosListHolder))
+	a.Equal("age", ErrosListHolder[0].Field)
+	a.Equal("Must be less than 100", ErrosListHolder[0].Message)
 }
 
 func Test_Struct_Not_Valid_Format(t *testing.T) {
@@ -90,8 +93,10 @@ func Test_Struct_Not_Valid_Format(t *testing.T) {
 		30,
 	}
 
-	valid := validator.Valid(strc)
+	valid := Valid(strc)
 
 	a.False(valid)
-	a.Equal(1, len(validator.ErrosListHolder))
+	a.Equal(1, len(ErrosListHolder))
+	a.Equal("email", ErrosListHolder[0].Field)
+	a.Equal("Format must match", ErrosListHolder[0].Message)
 }
